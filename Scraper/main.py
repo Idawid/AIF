@@ -7,7 +7,7 @@ from datetime import datetime
 from textblob import TextBlob
 
 # Search query
-search_query = 'NVDA'   # Use TSLA as the primary search term
+search_query = 'NVDA'   # Use NVDA as the primary search term
 time_filter = 'year'    # Filter posts and comments by a specific time range (in this case, one year)
 sort_by = 'relevance'   # Sort the search results by relevance
 limit = 2               # Limit the search query to X hits
@@ -22,10 +22,11 @@ if not os.path.exists(cache_directory):
     os.makedirs(cache_directory)
 
 # Cache files related to the search query
-query_results = os.path.join(cache_directory, 'TSLA_documents.csv')
-normalized_query_results = os.path.join(cache_directory, 'TSLA_documents_NORMALIZED.csv')
+query_results = os.path.join(cache_directory, 'raw_scraped_data.csv')
+normalized_query_results = os.path.join(cache_directory, 'normalized_scraped_data.csv')
 hyperparam_results = os.path.join(cache_directory, 'hyperparams.csv')
-sentiment_analysis_results = os.path.join(cache_directory, 'sentiment_scores.csv')
+sentiment_analysis_results = os.path.join(cache_directory, 'raw_sentiment_scores.csv')
+combined_sentiments_results = os.path.join(cache_directory, 'sentiments.csv')
 
 
 if __name__ == '__main__':
@@ -115,11 +116,12 @@ if __name__ == '__main__':
                 sentiment = tuple(row)  # Convert the row to a tuple
                 sentiments.append(sentiment)
         print("Done")
+
     if not sentiments:
         for normalized_text, data in texts:
             # Calculate sentiment on normalized text
             sentiment = TextBlob(normalized_text).sentiment.polarity
-            sentiments.append((normalized_text, sentiment, data))
+            sentiments.append((normalized_text, float(sentiment), data))
 
         with open(sentiment_analysis_results, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
