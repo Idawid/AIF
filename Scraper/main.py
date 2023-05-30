@@ -1,18 +1,21 @@
 import os
+from collections import defaultdict
+
 import praw
 import spacy
 import csv
-from datetime import date
-from datetime import datetime
+from datetime import datetime, timedelta
 from textblob import TextBlob
+import yfinance as yf
+import pandas as pd
 
 # Search query
-search_query = 'NVDA'   # Use NVDA as the primary search term
+search_query = 'NVDA'   # Use X as the primary search term
 time_filter = 'year'    # Filter posts and comments by a specific time range (in this case, one year)
 sort_by = 'relevance'   # Sort the search results by relevance
-limit = 2               # Limit the search query to X hits
+limit = 50              # Limit the search query to X hits
 comment_tree_depth = 2  # Limit the navigation of comment tree depth to X
-comments_per_post = 20  # Limit the comments under post to X
+comments_per_post = 5   # Limit the comments under post to X
 
 # Cache unique to the search query
 cache_path = 'cache'
@@ -130,7 +133,71 @@ if __name__ == '__main__':
             for text in sentiments:
                 writer.writerow(text)
 
-    # average_sentiments = []
-    # for date, sentiments in sentiments.items():
-    #     average_sentiment = sum(sentiments) / len(sentiments)
-    #     average_sentiments.append([average_sentiment, date])
+    sentiment_data = defaultdict(list)
+    combined_sentiments = []
+
+    print("Retrieving combined sentiment data ...")
+    if os.path.exists(combined_sentiments_results):
+        # Retrieve from the file
+        with open(combined_sentiments_results, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip the header row
+            for row in reader:
+                sentiment_data = tuple(row)  # Convert the row to a tuple
+                combined_sentiments.append(sentiment_data)
+        print("Done")
+    else:
+        print('\033[93m' + 'Combined sentiment data not found!' + '\033[0m')
+        print("Combining sentiments ...")
+
+        # Read the CSV file and collect sentiments for each date
+        # Assume the previous part has completed successfully
+        with open(sentiment_analysis_results, 'r', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)
+            for row in reader:
+                if float(row[1]) != float(0):
+                    normalized_text = row[0]
+                    sentiment = float(row[1])
+                    date = row[2]
+
+                    sentiment_data[date].append(sentiment)
+
+        for date, sentiments in sentiment_data.items():
+            sentiment_average = sum(sentiments) / len(sentiments)
+            sentiment_count = len(sentiments)
+            combined_sentiments.append([sentiment_average, sentiment_count, date])\
+
+        # Save combined sentiments to a new CSV file
+        with open(combined_sentiments_results, 'w', encoding='utf-8', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['sentiment_average', 'sentiment_count', 'date'])  # Write the header row
+            writer.writerows(combined_sentiments)
+
+
+    # Historical price results
+    end_date = datetime.today().strftime('%Y-%m-%d')
+    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+    start_date_obj = end_date_obj - timedelta(days=365)
+    start_date = start_date_obj.strftime('%Y-%m-%d')
+
+    stock_data = yf.download(search_query, start=start_date, end=end_date)
+    stock_data_filled = stock_data.resample('D').interpolate()
+
+    combined_data = []
+    for date, row in stock_data_filled.iterrows():
+        date_str = date.strftime('%Y-%m-%d')
+        sentiment_average = 0.0
+        sentiment_count = 0
+        for sentiment_avg, sentiment_cnt, sentiment_date in combined_sentiments:
+            if date_str == sentiment_date:
+                sentiment_average = sentiment_avg
+                sentiment_count = sentiment_cnt
+                break
+        close_price = row['Close']
+        combined_data.append([close_price, sentiment_average, sentiment_count, date_str])
+
+    df_combined = pd.DataFrame(combined_data, columns=['Close Price', 'Sentiment Average', 'Sentiment Count', 'Date'])
+    df_combined = df_combined.set_index('Date')
+
+    print(df_combined)
