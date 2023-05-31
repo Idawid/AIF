@@ -8,14 +8,18 @@ from datetime import datetime, timedelta
 from textblob import TextBlob
 import yfinance as yf
 import pandas as pd
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.stattools import adfuller
+import matplotlib.pyplot as plt
 
 # Search query
 search_query = 'NVDA'   # Use X as the primary search term
 time_filter = 'year'    # Filter posts and comments by a specific time range (in this case, one year)
 sort_by = 'relevance'   # Sort the search results by relevance
-limit = 50              # Limit the search query to X hits
-comment_tree_depth = 2  # Limit the navigation of comment tree depth to X
-comments_per_post = 5   # Limit the comments under post to X
+limit = 100             # Limit the search query to X hits
+comment_tree_depth = 1  # Limit the navigation of comment tree depth to X
+comments_per_post = 2   # Limit the comments under post to X
 
 # Cache unique to the search query
 cache_path = 'cache'
@@ -123,7 +127,8 @@ if __name__ == '__main__':
     if not sentiments:
         for normalized_text, data in texts:
             # Calculate sentiment on normalized text
-            sentiment = TextBlob(normalized_text).sentiment.polarity
+            clean_string = " ".join(eval(normalized_text))
+            sentiment = TextBlob(str(clean_string)).sentiment.polarity
             sentiments.append((normalized_text, float(sentiment), data))
 
         with open(sentiment_analysis_results, 'w', encoding='utf-8', newline='') as f:
@@ -195,9 +200,27 @@ if __name__ == '__main__':
                 sentiment_count = sentiment_cnt
                 break
         close_price = row['Close']
-        combined_data.append([close_price, sentiment_average, sentiment_count, date_str])
+        combined_data.append([float(close_price), float(sentiment_average), float(sentiment_count), date_str])
 
     df_combined = pd.DataFrame(combined_data, columns=['Close Price', 'Sentiment Average', 'Sentiment Count', 'Date'])
     df_combined = df_combined.set_index('Date')
 
-    print(df_combined)
+
+    def adf_test(series, signif=0.05):
+        dftest = adfuller(series, autolag='AIC')
+        adf = pd.Series(dftest[0:4], index=['Test Statistic', 'p-value', '# Lags', '# Observations'])
+        for key, value in dftest[4].items():
+            adf['Critical Value (%s)' % key] = value
+        print(adf)
+
+        p = adf['p-value']
+        if p <= signif:
+            print(f" Series is Stationary")
+        else:
+            print(f" Series is Non-Stationary")
+
+
+    # apply adf test on the series
+    adf_test(df_combined["Close Price"])
+    adf_test(df_combined["Sentiment Average"])
+    adf_test(df_combined["Sentiment Count"])
