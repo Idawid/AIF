@@ -39,6 +39,7 @@ normalized_query_results = os.path.join(cache_directory, 'normalized_scraped_dat
 hyperparam_results = os.path.join(cache_directory, 'hyperparams.csv')
 sentiment_analysis_results = os.path.join(cache_directory, 'raw_sentiment_scores.csv')
 combined_sentiments_results = os.path.join(cache_directory, 'sentiments.csv')
+dataset_results = os.path.join(cache_directory, 'dataset.csv')
 
 
 if __name__ == '__main__':
@@ -176,7 +177,7 @@ if __name__ == '__main__':
         for date, sentiments in sentiment_data.items():
             sentiment_average = sum(sentiments) / len(sentiments)
             sentiment_count = len(sentiments)
-            combined_sentiments.append([sentiment_average, sentiment_count, date])\
+            combined_sentiments.append([sentiment_average, sentiment_count, date])
 
         # Save combined sentiments to a new CSV file
         with open(combined_sentiments_results, 'w', encoding='utf-8', newline='') as csvfile:
@@ -185,28 +186,51 @@ if __name__ == '__main__':
             writer.writerows(combined_sentiments)
 
 
-    # Historical price results
-    end_date = datetime.today().strftime('%Y-%m-%d')
-    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
-    start_date_obj = end_date_obj - timedelta(days=365)
-    start_date = start_date_obj.strftime('%Y-%m-%d')
-
-    stock_data = yf.download(search_query, start=start_date, end=end_date)
-    stock_data_filled = stock_data.resample('D').interpolate()
-
+    # Historical prices + NLP dataset
     combined_data = []
-    for date, row in stock_data_filled.iterrows():
-        date_str = date.strftime('%Y-%m-%d')
-        sentiment_average = 0.0
-        sentiment_count = 0
-        for sentiment_avg, sentiment_cnt, sentiment_date in combined_sentiments:
-            if date_str == sentiment_date:
-                sentiment_average = sentiment_avg
-                sentiment_count = sentiment_cnt
-                break
-        close_price = row['Close']
-        combined_data.append([float(close_price), float(sentiment_average), float(sentiment_count), date_str])
 
+    print("Retrieving dataset ...")
+    if os.path.exists(dataset_results):
+        # Retrieve from the file
+        with open(dataset_results, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip the header row
+            for row in reader:
+                tupled_row = tuple(row)  # Convert the row to a tuple
+                combined_data.append((float(tupled_row[0]), float(tupled_row[1]), float(tupled_row[2]), tupled_row[3]))
+        print("Done")
+    else:
+        print('\033[93m' + 'Dataset not found!' + '\033[0m')
+        print("Searching for stock prices and combining with NLP ...")
+
+        # Historical price results
+        end_date = datetime.today().strftime('%Y-%m-%d')
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+        start_date_obj = end_date_obj - timedelta(days=365)
+        start_date = start_date_obj.strftime('%Y-%m-%d')
+
+        stock_data = yf.download(search_query, start=start_date, end=end_date)
+        stock_data_filled = stock_data.resample('D').interpolate()
+
+        for date, row in stock_data_filled.iterrows():
+            date_str = date.strftime('%Y-%m-%d')
+            sentiment_average = 0.0
+            sentiment_count = 0
+            for sentiment_avg, sentiment_cnt, sentiment_date in combined_sentiments:
+                if date_str == sentiment_date:
+                    sentiment_average = sentiment_avg
+                    sentiment_count = sentiment_cnt
+                    break
+            close_price = row['Close']
+            combined_data.append([float(close_price), float(sentiment_average), float(sentiment_count), date_str])
+
+        # Save combined sentiments to a new CSV file
+        with open(dataset_results, 'w', encoding='utf-8', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Close Price', 'Sentiment Average', 'Sentiment Count', 'Date'])  # Write the header row
+            writer.writerows(combined_data)
+
+    # Creating a dataframe from dataset
     df_combined = pd.DataFrame(combined_data, columns=['Close Price', 'Sentiment Average', 'Sentiment Count', 'Date'])
     df_combined = df_combined.set_index('Date')
 
