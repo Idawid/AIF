@@ -12,7 +12,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.stattools import adfuller
 from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, LSTM, Dropout
 import matplotlib.pyplot as plt
 import tensorflow
@@ -216,8 +216,8 @@ if __name__ == '__main__':
 
     dataset = df.values
     split_train = 70 / 100  # Training: 70%
-    split_val = 20 / 100  # Validation: 20%
-    split_test = 10 / 100  # Testing: 10%
+    split_val = 20 / 100    # Validation: 20%
+    split_test = 10 / 100   # Testing: 10%
 
     train = dataset[:int(dataset.shape[0] * split_train)]
     valid = dataset[int(dataset.shape[0] * split_train): int(dataset.shape[0] * (split_train + split_val))]
@@ -258,43 +258,66 @@ if __name__ == '__main__':
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 3))
 
     # Create and fit the LSTM network. Adjust layers if needed
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 3)))
-    model.add(LSTM(units=50, return_sequences=False))
-    model.add(Dropout(0.2))
-    model.add(Dense(units=25))
-    model.add(Dense(units=1))   # output layer
-
-    # Adjust the training process if needed
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=20, batch_size=1, verbose=2)
+    # model = Sequential()
+    # model.add(LSTM(units=40, return_sequences=True, input_shape=(x_train.shape[1], 3)))
+    # model.add(LSTM(units=40, return_sequences=True))
+    # model.add(Dropout(0.2))
+    # model.add(LSTM(units=50, return_sequences=False))
+    # model.add(Dropout(0.2))
+    # model.add(Dense(units=20))
+    # model.add(Dense(units=1))   # output layer
+    #
+    # # Adjust the training process if needed
+    # model.compile(loss='mean_squared_error', optimizer='adam')
+    # model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=15, batch_size=1, verbose=2)
 
     # model gosling ryan gosling
-    model.save('gosling.h5')
+    # model.save('gosling.h5')
 
-    # Test data set
-    test_data = scaled_data[len(scaled_data) - len(valid) - 60:]
-
-    x_test = []
-    for i in range(60, test_data.shape[0]):
-        x_test.append(test_data[i - 60:i, :])
-    x_test = np.array(x_test)
-
-    # Reshape the data into 3-D array
-    x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 3))
+    model = load_model('gosling.h5')
 
     # Make the prediction
-    closing_price = model.predict(x_test)
-    closing_price = np.concatenate((closing_price, np.zeros_like(closing_price), np.zeros_like(closing_price)), axis=1)
-    closing_price = scaler.inverse_transform(closing_price)
-
-    valid_with_predictions = np.concatenate((valid, closing_price), axis=1)
+    predicted_price = model.predict(x_test)
+    predicted_price = np.concatenate((predicted_price, np.zeros((len(predicted_price), 2))), axis=1)
+    predicted_price = scaler.inverse_transform(predicted_price)[:, 0]
 
     # Visualize the prediction
     plt.figure(figsize=(16, 8))
+    plt.title('Model')
+    plt.xlabel('Date', fontsize=18)
+    plt.ylabel('Close Price', fontsize=18)
     plt.plot(df['Close Price'], label='Actual Close Price')
-    plt.plot(np.arange(len(valid_with_predictions)) + len(df) - len(valid_with_predictions), valid_with_predictions[:, 3], label='Close Price Predictions')
+    plt.plot(df.iloc[len(train)+len(valid):].index, predicted_price, label='Predicted Close Price')
     plt.legend()
     plt.show()
 
+
+    last_x_days = scaled_data[-30:]
+    next_month_prices = []
+
+    predict_for_x_days = 7
+    for _ in range(predict_for_x_days):  # Predict the next X days
+        # Reshape and expand dims to fit the model input shape
+        last_x_days = np.expand_dims(last_x_days, axis=0)
+
+        # Predict the next day price
+        next_day_price = model.predict(last_x_days)
+
+        next_day_price = np.concatenate((next_day_price, np.zeros((len(next_day_price), 2))), axis=1)
+        # Append the predicted price to the end of sequence and use the last 60 days for next prediction
+        last_x_days = np.concatenate((last_x_days[0][1:], next_day_price), axis=0)
+
+        # Store the predicted price
+        next_month_prices.append(scaler.inverse_transform(next_day_price)[:, 0][0])
+
+    print(next_month_prices)
+
+    # Plot the predicted close prices for the next month
+    plt.figure(figsize=(16, 8))
+    plt.title('Predicted Close Prices for Next Month')
+    plt.xlabel('Day', fontsize=18)
+    plt.ylabel('Close Price', fontsize=18)
+    plt.plot(next_month_prices, label='Predicted Close Price for the next month')
+    plt.legend()
+    plt.show()
 

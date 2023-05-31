@@ -1,0 +1,23 @@
+normalized_text,sentiment,date
+"['start', 'Monday', 'buy', 'spy', 'Tuesday', 'start', 'blow']",0.0,2023-05-10
+"['take', 'gain', 'SPY', 'shorted', 'SBUX', 'earning', 'take', 'shorted', 'IEP', 'shorted', 'PYPL', 'earning', 'short', 'abnb', 'short', 'CMG', 'currently', 'open', 'position']",0.0,2023-05-10
+"['User', 'total', 'see', 'year', 'ago', 'total', 'good', 'Account']",0.2333333333333333,2023-05-10
+"['cool', 'want', 'end', 'place']",0.35,2023-05-10
+"['turn', 'cash', 'year', 'ago', 'lose', 'subsequent', 'deposit', 'recently', 'turn', 'day', 'day', 'money', 'run', 'life']",0.0,2023-05-10
+"['sure', 'pull', 'time', 'child', 'support', 'be', 'not', 'pleasant']",0.06666666666666668,2023-05-10
+"['congratfukulation', 'graduate', 'r', 'investing', 'turn', 'WSB', 'badge', 'guard', 'desk', 'place', 'regard']",0.0,2023-05-10
+['time'],0.0,2023-05-10
+"['extremely', 'impressive', 'tragic']",0.125,2023-05-10
+"['question', 'start', 'rich', 'ass', 'motherfucker']",0.375,2023-05-10
+"['gain', 'impressive']",1.0,2023-05-10
+"['Holy', 'crap', 'comment', 'post', 'WSB', 'fun', 'smart', 'people', 'act', 'like', 'regard', 'actual', 'regard']",-0.07142857142857142,2023-05-10
+"['GameStop', 'stop', 'trade', 'week', 'randomly', 'buy', 'Palantir', 'call', 'triple', 'money', 'sell', 'morning', 'go', 'to', 'ignore', 'stock', 'little', 'long', 'Shit', 'gamble', 'man']",-0.234375,2023-05-10
+"['one', 'free', 'op']",0.4,2023-05-10
+"['happy', 'couple', 'month', 'fair', 'tho', 'zero', 'idea']",0.75,2023-05-10
+"['comment', 'history', 'suggest', 'lot', 'buying', 'sell', 'worth', 'put', 'nice', 'try', 'congrat', 'presumably', 'post', 'trading', 'history', 'time', 'lol']",0.5666666666666667,2023-05-10
+['know'],0.0,2023-05-10
+"['make', 'colateral']",0.0,2023-05-10
+"['week', 'dope', 'shit', 'week', 'easy', 'money']",0.11666666666666667,2023-05-10
+['fuck'],-0.4,2023-05-10
+"['Chatgpt', 'say', 'invest', 'SPY', 'Invesco', 'qqq']",0.0,2023-05-10
+"['congrat', 'good', 'trade']",0.7,2023-05-10
