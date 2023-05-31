@@ -11,15 +11,20 @@ import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.stattools import adfuller
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Dropout
 import matplotlib.pyplot as plt
+import tensorflow
+import numpy as np
 
 # Search query
-search_query = 'NVDA'   # Use X as the primary search term
+search_query = 'SPY'    # Use X as the primary search term
 time_filter = 'year'    # Filter posts and comments by a specific time range (in this case, one year)
 sort_by = 'relevance'   # Sort the search results by relevance
-limit = 100             # Limit the search query to X hits
-comment_tree_depth = 1  # Limit the navigation of comment tree depth to X
-comments_per_post = 2   # Limit the comments under post to X
+limit = 1000            # Limit the search query to X hits
+comment_tree_depth = 2  # Limit the navigation of comment tree depth to X
+comments_per_post = 20  # Limit the comments under post to X
 
 # Cache unique to the search query
 cache_path = 'cache'
@@ -127,7 +132,7 @@ if __name__ == '__main__':
     if not sentiments:
         for normalized_text, data in texts:
             # Calculate sentiment on normalized text
-            clean_string = " ".join(eval(normalized_text))
+            clean_string = " ".join(eval(str(normalized_text)))
             sentiment = TextBlob(str(clean_string)).sentiment.polarity
             sentiments.append((normalized_text, float(sentiment), data))
 
@@ -205,22 +210,91 @@ if __name__ == '__main__':
     df_combined = pd.DataFrame(combined_data, columns=['Close Price', 'Sentiment Average', 'Sentiment Count', 'Date'])
     df_combined = df_combined.set_index('Date')
 
+    # LSTM part
+    # df_combined is DataFrame indexed by date
+    df = df_combined[['Close Price', 'Sentiment Average', 'Sentiment Count']]
 
-    def adf_test(series, signif=0.05):
-        dftest = adfuller(series, autolag='AIC')
-        adf = pd.Series(dftest[0:4], index=['Test Statistic', 'p-value', '# Lags', '# Observations'])
-        for key, value in dftest[4].items():
-            adf['Critical Value (%s)' % key] = value
-        print(adf)
+    dataset = df.values
+    split_train = 70 / 100  # Training: 70%
+    split_val = 20 / 100  # Validation: 20%
+    split_test = 10 / 100  # Testing: 10%
 
-        p = adf['p-value']
-        if p <= signif:
-            print(f" Series is Stationary")
-        else:
-            print(f" Series is Non-Stationary")
+    train = dataset[:int(dataset.shape[0] * split_train)]
+    valid = dataset[int(dataset.shape[0] * split_train): int(dataset.shape[0] * (split_train + split_val))]
+    test = dataset[int(dataset.shape[0] * (split_train + split_val)):]
+
+    # Scale the data
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(dataset)
+
+    # Create the training data set
+    x_train, y_train = [], []
+    for i in range(60, len(train)):
+        x_train.append(scaled_data[i - 60:i, :])
+        y_train.append(scaled_data[i, 0])  # predict the 'Close Price'
+    x_train, y_train = np.array(x_train), np.array(y_train)
+
+    # Reshape the data into 3-D array
+    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 3))
+
+    # Create the validation data set
+    x_val, y_val = [], []
+    for i in range(len(train), len(train) + len(valid)):
+        x_val.append(scaled_data[i - 60:i, :])
+        y_val.append(scaled_data[i, 0])
+    x_val, y_val = np.array(x_val), np.array(y_val)
+
+    # Reshape the data into 3-D array
+    x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], 3))
+
+    # Create the testing data set
+    x_test, y_test = [], []
+    for i in range(len(train) + len(valid), len(dataset)):
+        x_test.append(scaled_data[i - 60:i, :])
+        y_test.append(scaled_data[i, 0])
+    x_test, y_test = np.array(x_test), np.array(y_test)
+
+    # Reshape the data into 3-D array
+    x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 3))
+
+    # Create and fit the LSTM network. Adjust layers if needed
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 3)))
+    model.add(LSTM(units=50, return_sequences=False))
+    model.add(Dropout(0.2))
+    model.add(Dense(units=25))
+    model.add(Dense(units=1))   # output layer
+
+    # Adjust the training process if needed
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=20, batch_size=1, verbose=2)
+
+    # model gosling ryan gosling
+    model.save('gosling.h5')
+
+    # Test data set
+    test_data = scaled_data[len(scaled_data) - len(valid) - 60:]
+
+    x_test = []
+    for i in range(60, test_data.shape[0]):
+        x_test.append(test_data[i - 60:i, :])
+    x_test = np.array(x_test)
+
+    # Reshape the data into 3-D array
+    x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 3))
+
+    # Make the prediction
+    closing_price = model.predict(x_test)
+    closing_price = np.concatenate((closing_price, np.zeros_like(closing_price), np.zeros_like(closing_price)), axis=1)
+    closing_price = scaler.inverse_transform(closing_price)
+
+    valid_with_predictions = np.concatenate((valid, closing_price), axis=1)
+
+    # Visualize the prediction
+    plt.figure(figsize=(16, 8))
+    plt.plot(df['Close Price'], label='Actual Close Price')
+    plt.plot(np.arange(len(valid_with_predictions)) + len(df) - len(valid_with_predictions), valid_with_predictions[:, 3], label='Close Price Predictions')
+    plt.legend()
+    plt.show()
 
 
-    # apply adf test on the series
-    adf_test(df_combined["Close Price"])
-    adf_test(df_combined["Sentiment Average"])
-    adf_test(df_combined["Sentiment Count"])
