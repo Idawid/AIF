@@ -70,8 +70,14 @@ next_month_prices = []
 # App root
 root = tk.Tk()
 root.geometry('600x600')
+root.title("Stock prices prediction using NLP")
 
-label = tk.Label(root, text="Predict for how many days?")
+title = tk.Label(root, text="Stock prices prediction using NLP", font=("Helvetica", 16))
+title.pack()
+authors = tk.Label(root, text="Authors: Dawid Mączka, Nikodem Olszowy\nMateusz Sudejko, Maciej Sajecki", font=("Helvetica", 11))
+authors.pack()
+
+label = tk.Label(root, text="Stock: SPY | Predict for how many days?", font=("Helvetica", 16))
 label.pack()
 input_days = tk.Entry(root)
 input_days.pack()
