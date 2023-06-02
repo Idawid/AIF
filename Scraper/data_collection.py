@@ -20,9 +20,9 @@ query_parameters = {
     'time_range': 'year',
     'sort_order': 'relevance',
     # Query limits
-    'post_limit': 2,
+    'post_limit': 2000,
     'comment_depth': 3,
-    'comment_limit': 3,
+    'comment_limit': 100,
 }
 
 # Cache unique to the search query
@@ -150,7 +150,7 @@ def main():
 
     if os.path.isfile(dataset_file):
         print("\nReading existing dataset from file...")
-        df_grouped = pd.read_csv(dataset_file)
+        df = pd.read_csv(dataset_file)
         print("Successfully retrieved existing grouped data.")
     else:
         print("\n" + Fore.LIGHTYELLOW_EX + "No existing dataset found. Proceeding with data aggregation..." + Style.RESET_ALL)
