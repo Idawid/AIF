@@ -18,31 +18,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.stattools import adfuller
 import matplotlib.pyplot as plt
-
-
-query_parameters = {
-    # Client details
-    'client_id': 'CvDuZ97x1r9f0BnG-1_MRg',
-    'client_secret': 'E-y0IxK4zkRHE6ltzt-jjKcUAZi_QQ',
-    'user_agent': 'WSB scrapper (by /u/VultureGamer)',
-    # Search parameters
-    'subreddit': 'wallstreetbets',
-    'search_term': 'SPY',
-    'time_range': 'year',
-    'sort_order': 'relevance',
-    # Query limits
-    'post_limit': 2000,
-    'comment_depth': 3,
-    'comment_limit': 100,
-}
-
-# Cache unique to the search query
-cache_path = 'cache'
-cache_directory = f"{query_parameters['search_term']}_{query_parameters['time_range']}_{query_parameters['sort_order']}_" \
-                  f"limit{query_parameters['post_limit']}_depth{query_parameters['comment_depth']}"
-cache_directory = os.path.join(cache_path, cache_directory)
-if not os.path.exists(cache_directory):
-    os.makedirs(cache_directory)
+from config import cache_directory
 
 
 if __name__ == '__main__':
@@ -104,23 +80,23 @@ if __name__ == '__main__':
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 3))
 
     # Create and fit the LSTM network. Adjust layers if needed
-    # model = Sequential()
-    # model.add(LSTM(units=40, return_sequences=True, input_shape=(x_train.shape[1], 3)))
-    # model.add(LSTM(units=40, return_sequences=True))
-    # model.add(Dropout(0.2))
-    # model.add(LSTM(units=50, return_sequences=False))
-    # model.add(Dropout(0.2))
-    # model.add(Dense(units=20))
-    # model.add(Dense(units=1))   # output layer
-    #
-    # # Adjust the training process if needed
-    # model.compile(loss='mean_squared_error', optimizer='adam')
-    # model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=15, batch_size=1, verbose=2)
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 3)))
+    model.add(LSTM(units=200, return_sequences=True))
+    model.add(Dropout(0.2))
+    model.add(LSTM(units=200, return_sequences=False))
+    model.add(Dropout(0.2))
+    model.add(Dense(units=150))
+    model.add(Dense(units=1))   # output layer
 
-    # model gosling ryan gosling
-    # model.save('gosling.h5')
+    # Adjust the training process if needed
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=15, batch_size=1, verbose=2)
 
-    model = load_model('gosling.h5')
+    #model gosling ryan gosling
+    model.save('gosling.h5')
+
+    #model = load_model('gosling.h5')
 
     # Make the prediction
     predicted_price = model.predict(x_test)
