@@ -12,8 +12,8 @@ query_parameters = {
     'sort_order': 'relevance',
     # Query limits
     'post_limit': 2000,
-    'comment_depth': 3,
-    'comment_limit': 100,
+    'comment_depth': 2,
+    'comment_limit': 50,
 }
 
 # Cache unique to the search query

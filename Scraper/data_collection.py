@@ -8,7 +8,7 @@ from tqdm import tqdm
 from colorama import Fore, Style
 from textblob import TextBlob
 from datetime import datetime, timedelta
-from config import query_parameters, cache_directory
+from config import query_parameters, cache_directory, create_cache_dir
 
 
 def query_reddit_data(query_params, cache_base_dir='cache'  ):
@@ -100,6 +100,7 @@ def add_stock_price(df, query_params):
 
 
 def main():
+    create_cache_dir()
     reddit_data_file = os.path.join(cache_directory, 'reddit_data.csv')
     if os.path.isfile(reddit_data_file):
         print("Reading existing reddit data from file ...")
